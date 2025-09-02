@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -17,13 +18,19 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" || parts[1] != "mysecrettoken" {
+		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
-		c.Set("userId", "123")
+		claim, err := ValidateJWTToken(parts[1])
+		if err != nil {
+			log.Fatal(err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		}
+
+		c.Set("username", claim.Username)
 
 		c.Next()
 	}

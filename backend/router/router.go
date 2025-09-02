@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	auth "backend/auth"
-	"backend/controllers"
 	controller "backend/controllers"
 )
 
@@ -14,8 +13,8 @@ func SetupRouter() *gin.Engine {
 	userRoutes := r.Group("/users")
 	{
 		userRoutes.GET("/", auth.AuthMiddleware(), controller.GetUsers)
-		userRoutes.POST("/", auth.AuthMiddleware(), controller.CreateUser)
-		userRoutes.GET("/:id", controllers.GetUserByID)
+		userRoutes.POST("/login", controller.Login)
+		userRoutes.POST("/signup", controller.Signup)
 	}
 
 	return r
