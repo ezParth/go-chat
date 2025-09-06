@@ -5,10 +5,12 @@ import (
 
 	auth "backend/auth"
 	controller "backend/controllers"
+	ws "backend/ws"
 )
 
 func SetupRouter() *gin.Engine {
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
 
 	userRoutes := r.Group("/users")
 	{
@@ -16,6 +18,8 @@ func SetupRouter() *gin.Engine {
 		userRoutes.POST("/login", controller.Login)
 		userRoutes.POST("/signup", controller.Signup)
 	}
+
+	r.GET("/ws", ws.WsHandler)
 
 	return r
 }

@@ -4,25 +4,32 @@ import (
 	auth "backend/auth"
 	client "backend/database"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type User struct {
-	Name     string `json:"name"`
+	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-var userCollection = client.Client.Database("go-chat").Collection("User")
+var userCollection *mongo.Collection
+
+func InitCollection() {
+	userCollection = client.Client.Database("go-chat").Collection("User")
+}
 
 func GetUsers(c *gin.Context) {
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	fmt.Println("Hitting getUsers")
 	cursor, err := userCollection.Find(ctx, bson.M{})
 	if err != nil {
 		log.Fatal(err)
@@ -82,6 +89,8 @@ func Signup(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	var LoginData struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -99,9 +108,16 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	isPasswordCorrect := auth.CompareHashedPassword(user["password"].(string), LoginData.Email)
+	passwordFromDB, ok := user["password"].(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "password not found or invalid in DB"})
+		return
+	}
+
+	fmt.Println("Hashed Password -> ", passwordFromDB)
+	isPasswordCorrect := auth.CompareHashedPassword(passwordFromDB, LoginData.Password)
 	if !isPasswordCorrect {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid password"})
 		return
 	}
 
