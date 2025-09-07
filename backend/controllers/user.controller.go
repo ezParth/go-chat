@@ -19,10 +19,9 @@ import (
 var userCollection *mongo.Collection
 
 func InitCollection() {
-	userCollection = client.Client.Database("go-chat").Collection("users") // lowercase collection name is better
+	userCollection = client.Client.Database("go-chat").Collection("User")
 }
 
-// Get all users
 func GetUsers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -45,7 +44,6 @@ func GetUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
-// Signup new user
 func Signup(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
