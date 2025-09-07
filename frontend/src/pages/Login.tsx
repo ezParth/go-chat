@@ -3,8 +3,7 @@ import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import { useDispatch } from "react-redux"
 import { loginSuccess } from "../features/auth/authSlice"
-
-const API = "http://localhost:8080/users"
+import { API } from "../API/api"
 
 const handleLogin = async (username: string, password: string) => {
     try {
