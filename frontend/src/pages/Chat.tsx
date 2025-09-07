@@ -1,81 +1,98 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 
 interface WSMessage {
-    Event: string
-    Room?: string
-    User?: string
-    Data?: any
+  event: string;
+  room?: string;
+  user?: string;
+  data?: any;
 }
 
 export default function Chat() {
+  const ws = useRef<WebSocket | null>(null);
+  const [messages, setMessages] = useState<string[]>([]);
+  const [message, setMessage] = useState<string>("");
 
-    const ws = useRef<WebSocket | null>(null)
-    const [messages, setMessages] = useState<Array<string>>([])
-    const [message, setMessage] = useState<string>("")
+  useEffect(() => {
+    ws.current = new WebSocket("ws://localhost:8080/ws");
 
-    useEffect(() => {
-        ws.current = new WebSocket("http://localhost:8080/ws")
+    ws.current.onopen = () => {
+      console.log("Client Connected Successfully");
 
-        ws.current.onopen = () => {
-            console.log("Client Connected Successfully")
-            
-            const data: WSMessage = {
-                Event: "join",
-                User: "alice",
-            }
+      const data: WSMessage = {
+        event: "join",
+        user: "alice",
+      };
 
-            ws.current?.send(JSON.stringify(data))
+      ws.current?.send(JSON.stringify(data));
+    };
+
+    ws.current.onmessage = (event: MessageEvent) => {
+      try {
+        const msg: WSMessage = JSON.parse(event.data);
+
+        if (!msg.event) {
+          console.warn("Event cannot be empty");
+          return;
         }
 
-        ws.current.onmessage = (event: any) => {
-            const msg: WSMessage = JSON.parse(event)
-            console.log(msg)
+        switch (msg.event) {
+          case "Recieve-Message":
+            setMessages((prev) => [...prev, String(msg.data)]);
+            break;
 
-            if(!msg.Event) {
-                console.log("Event Cannot be Empty")
-                return
-            }
-
-            switch (msg.Event) {
-                case "Message":
-                    setMessages((prev) => [...prev, String(msg?.Data)])
-                    break;
-            
-                default:
-                    break;
-            }
+          default:
+            console.log("Unhandled event:", msg.event);
+            break;
         }
-    }, [])
+      } catch (err) {
+        console.error("Invalid message received:", event.data);
+      }
+    };
 
-    const handleMessage = () => {
-        if(message == "") {
-            console.log("Message Can't be Empty")
-            return
-        }
+    // cleanup on component unmount
+    return () => {
+      ws.current?.close();
+    };
+  }, []);
 
-        const sendMessage: WSMessage = {
-            Event: "Message",
-            Room: "General",
-            User: "Alice",
-            Data: message
-        }
-
-        ws.current?.send(JSON.stringify(sendMessage))
+  const handleMessage = () => {
+    if (message.trim() === "") {
+      console.warn("Message can't be empty");
+      return;
     }
 
-    return (
-        <div>
-            <div className="">
-                <input type="text" placeholder="Enter a message..." value={message} onChange={(e) => setMessage(e.target.value)} />
-                <button onChange={handleMessage}>Submit</button>
-            </div>
+    const sendMessage: WSMessage = {
+      event: "Message",
+      room: "General",
+      user: "Alice",
+      data: message,
+    };
 
-            <div>
-                {messages.map((msg, key) => (
-                    <li key={key}>{msg}</li>
-                ))}
-            </div>
-        </div>
-    )
+    ws.current?.send(JSON.stringify(sendMessage));
+    setMessage(""); // clear input after sending
+  };
+
+  return (
+    <div>
+      <div>
+        <input
+          type="text"
+          placeholder="Enter a message..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+        <button onClick={handleMessage}>Submit</button>
+      </div>
+
+      <div>
+        <ul>
+          {messages.map((msg, key) => (
+            <li key={key}>{msg}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 }

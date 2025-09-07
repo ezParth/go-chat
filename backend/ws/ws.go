@@ -23,17 +23,62 @@ type WSMessage struct {
 	Data  any    `json:"data,omitempty"`
 }
 
+type RoomMember struct {
+	Username string `json:"username"`
+	Admin    bool   `json:"Admin"`
+}
+
+type Admin struct {
+	Username string `json:"username"`
+	RoomName string `json:"roomname"`
+}
+
+var Room = make(map[RoomMember]*websocket.Conn)
+
+var User = make(map[string]*websocket.Conn)
+
 func handleMessageEvent(conn *websocket.Conn, msg WSMessage, mt int) {
+	fmt.Println("HANDLING MESSAGE EVENT")
 	data, ok := msg.Data.(string)
 	if !ok {
 		fmt.Println("Error in Type handling of data")
 	}
 
-	conn.WriteMessage(mt, []byte(data))
+	var Message WSMessage = WSMessage{
+		Event: "Recieve-Message",
+		Room:  "General",
+		User:  "Alice",
+		Data:  data,
+	}
+
+	if err := conn.WriteJSON(Message); err != nil {
+		log.Println("Error writing JSON message:", err)
+		return
+	}
+
 }
 
 func handleMessageEventForRoom(conn *websocket.Conn, msg WSMessage, mt int) {
+	data, ok := msg.Data.(string)
+	if !ok {
+		fmt.Println("Error in handling Type of data in handleMessageEventForRoom")
+	}
 
+	fmt.Println("data -> ", data)
+}
+
+func handleCreateRoom(conn *websocket.Conn, msg WSMessage, mt int) {
+
+}
+
+func handleJoinRoom(conn *websocket.Conn, msg WSMessage, mt int) {
+	if msg.Room == "" {
+		fmt.Println("Room cannot be empty bith")
+	}
+}
+
+func handleJoin(conn *websocket.Conn, msg WSMessage, mt int) {
+	User[msg.User] = conn
 }
 
 func WsHandler(c *gin.Context) {
@@ -42,21 +87,27 @@ func WsHandler(c *gin.Context) {
 		log.Fatal("Error in websocket upgrader -> ", err)
 	}
 
+	fmt.Println("conn -> ", conn.LocalAddr())
+
 	defer conn.Close()
 
 	for {
 		mt, msg, err := conn.ReadMessage()
 		if err != nil {
-			log.Fatal("Error in Reading Messages -> ", err)
+			log.Println("Error in Reading Messages -> ", err)
+			break
 		}
+
+		fmt.Println("MESSAGE -> ", string(msg))
 
 		var Message WSMessage
 		if err = json.Unmarshal(msg, &Message); err != nil {
-			log.Fatal("Error in Unmarshelling Message -> ", err)
+			log.Println("Invalid message format:", err)
+			continue
 		}
-
 		if Message.Event == "" {
-			log.Fatal("Message.Event Cannot be nil or Empty -> ", Message.Event)
+			log.Println("Message.Event cannot be empty")
+			continue
 		}
 
 		switch Message.Event {
@@ -65,6 +116,8 @@ func WsHandler(c *gin.Context) {
 
 		case "Room-Message":
 			handleMessageEventForRoom(conn, Message, mt)
+		case "join":
+			handleJoin(conn, Message, mt)
 		}
 	}
 }
