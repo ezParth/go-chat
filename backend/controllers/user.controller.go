@@ -92,7 +92,7 @@ func Login(c *gin.Context) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	var LoginData struct {
-		Email    string `json:"email"`
+		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 
@@ -102,7 +102,7 @@ func Login(c *gin.Context) {
 	}
 
 	var user bson.M
-	err := userCollection.FindOne(ctx, bson.M{"email": LoginData.Email}).Decode(&user)
+	err := userCollection.FindOne(ctx, bson.M{"email": LoginData.Username}).Decode(&user)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 		return
