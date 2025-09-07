@@ -5,7 +5,6 @@ import (
 	"log"
 	"sync"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
@@ -38,13 +37,17 @@ func (h *Hub) RemoveClient(name string) {
 	delete(h.conns, name)
 }
 
-func CreateHub() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		HUB := NewHub()
-		fmt.Println("HUB created ->", HUB)
-		c.Set("hub", HUB)
-		c.Next()
-	}
+// func CreateHub(c *gin.Context) {
+// 	HUB := NewHub()
+// 	fmt.Println("HUB created ->", HUB)
+// 	c.Set("hub", HUB)
+// 	c.Next()
+// }
+
+func CreateHub() *Hub {
+	HUB := NewHub()
+	fmt.Println("HUB created ->", HUB)
+	return HUB
 }
 
 func (h *Hub) Broadcast(msg interface{}) {
@@ -55,5 +58,11 @@ func (h *Hub) Broadcast(msg interface{}) {
 		if err := conn.WriteJSON(msg); err != nil {
 			log.Printf("Error broadcasting to %s: %v\n", name, err)
 		}
+	}
+}
+
+func (h *Hub) PrintHub() {
+	for name, _ := range h.conns {
+		log.Println("name -> ", name)
 	}
 }

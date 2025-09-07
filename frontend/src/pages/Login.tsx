@@ -1,6 +1,8 @@
 import { useState } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
+import { useDispatch } from "react-redux"
+import { loginSuccess } from "../features/auth/authSlice"
 
 const API = "http://localhost:8080/users"
 
@@ -15,14 +17,13 @@ const handleLogin = async (username: string, password: string) => {
             console.log("res.data -> ", res.data)
             localStorage.setItem("username", username)
             localStorage.setItem("token", res.data?.token)
-            return true
+            return res
         }else {
             console.log("Error in login -> ", res.data)
-            return false
+            return res
         }
     } catch (error) {
         console.log("Error during login", error)
-        return false
     }
 }
 
@@ -39,14 +40,13 @@ const handleSignup = async (username: string, email: string, password: string) =
             console.log(res.data)
             localStorage.setItem("username", username)
             localStorage.setItem("token", res.data?.token)
-            return true
+            return res
         }else {
             console.log("error -> ", res.data)
-            return false
+            return res
         }
     } catch (error) {
         console.log("Error during singup", error)
-        return false
     }
 }
 
@@ -61,15 +61,28 @@ const Login = () => {
     }
 
     const nav = useNavigate()
+    const dispatch = useDispatch()
     const handleSubmit = async () => {
         if(islogin) {
-            const success = await handleLogin(username, password)
-            if(success) {
+            const res = await handleLogin(username, password)
+            if(res == undefined) {
+                alert("Cannot login")
+                return
+            }
+            
+            if(res.data.success) {
+                dispatch(loginSuccess({username, token: res.data.token}))
                 nav("/")
             }
         }else {
-            const success = await handleSignup(username, email, password)
-            if(success) {
+            const res = await handleSignup(username, email, password)
+            if(res == undefined) {
+                alert("Cannot signup")
+                return
+            }
+
+            if(res.data.success) {
+                dispatch(loginSuccess({username, token: res.data.token}))
                 nav("/")
             }
         }

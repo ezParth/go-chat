@@ -3,6 +3,7 @@ package main
 import (
 	controller "backend/controllers"
 	mongo "backend/database"
+	"backend/helper"
 	router "backend/router"
 	"fmt"
 )
@@ -10,7 +11,8 @@ import (
 func main() {
 	mongo.Connect()
 	controller.InitCollection()
-	r := router.SetupRouter()
+	hub := helper.CreateHub()
+	r := router.SetupRouter(hub)
 	fmt.Println("Server Started on PORT 8080")
 	r.Run(":8080")
 }

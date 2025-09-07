@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store/store";
+import { useNavigate } from "react-router-dom";
 
 interface WSMessage {
   event: string;
@@ -13,6 +16,17 @@ export default function Chat() {
   const ws = useRef<WebSocket | null>(null);
   const [messages, setMessages] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("");
+  const { username, isAuthenticated } = useSelector((state: RootState) => state.auth)
+  const nav = useNavigate()
+
+  useEffect(() => {
+    if (!isAuthenticated || !username) {
+      alert("Please login");
+      nav("/login");
+    }
+  }, [isAuthenticated, nav]);
+
+
 
   useEffect(() => {
     ws.current = new WebSocket("ws://localhost:8080/ws");
@@ -22,7 +36,7 @@ export default function Chat() {
 
       const data: WSMessage = {
         event: "join",
-        user: "alice",
+        user: username ?? "",
       };
 
       ws.current?.send(JSON.stringify(data));
@@ -66,16 +80,17 @@ export default function Chat() {
     const sendMessage: WSMessage = {
       event: "Message",
       room: "General",
-      user: "Alice",
+      user: username ?? "",
       data: message,
     };
 
     ws.current?.send(JSON.stringify(sendMessage));
-    setMessage(""); // clear input after sending
+    setMessage("");
   };
 
   return (
     <div>
+      <p>welcome - {username}</p>
       <div>
         <input
           type="text"

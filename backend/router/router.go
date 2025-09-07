@@ -9,10 +9,14 @@ import (
 	ws "backend/ws"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(hub *helper.Hub) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(auth.CORSMiddleware())
+	r.Use(func(ctx *gin.Context) {
+		ctx.Set("hub", hub)
+		ctx.Next()
+	})
 
 	userRoutes := r.Group("/users")
 	{
@@ -21,7 +25,7 @@ func SetupRouter() *gin.Engine {
 		userRoutes.POST("/signup", controller.Signup)
 	}
 
-	r.GET("/ws", helper.CreateHub(), ws.WsHandler)
+	r.GET("/ws", ws.WsHandler)
 
 	return r
 }

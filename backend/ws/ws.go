@@ -50,6 +50,8 @@ func handleMessageEvent(conn *websocket.Conn, msg WSMessage, mt int, hub *helper
 		Data:  data,
 	}
 
+	hub.PrintHub()
+
 	hub.Broadcast(Message)
 }
 
