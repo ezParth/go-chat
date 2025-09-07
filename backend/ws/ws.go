@@ -1,6 +1,7 @@
 package ws
 
 import (
+	helper "backend/helper"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -19,7 +20,7 @@ var upgrader = websocket.Upgrader{
 type WSMessage struct {
 	Event string `json:"event"`
 	Room  string `json:"room,omitempty"`
-	User  string `json:"user,omitempty"`
+	User  string `json:"user"`
 	Data  any    `json:"data,omitempty"`
 }
 
@@ -35,9 +36,7 @@ type Admin struct {
 
 var Room = make(map[RoomMember]*websocket.Conn)
 
-var User = make(map[string]*websocket.Conn)
-
-func handleMessageEvent(conn *websocket.Conn, msg WSMessage, mt int) {
+func handleMessageEvent(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
 	fmt.Println("HANDLING MESSAGE EVENT")
 	data, ok := msg.Data.(string)
 	if !ok {
@@ -51,11 +50,7 @@ func handleMessageEvent(conn *websocket.Conn, msg WSMessage, mt int) {
 		Data:  data,
 	}
 
-	if err := conn.WriteJSON(Message); err != nil {
-		log.Println("Error writing JSON message:", err)
-		return
-	}
-
+	hub.Broadcast(Message)
 }
 
 func handleMessageEventForRoom(conn *websocket.Conn, msg WSMessage, mt int) {
@@ -77,11 +72,24 @@ func handleJoinRoom(conn *websocket.Conn, msg WSMessage, mt int) {
 	}
 }
 
-func handleJoin(conn *websocket.Conn, msg WSMessage, mt int) {
-	User[msg.User] = conn
+func handleJoin(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
+	// helper.User[msg.User] = conn
 }
 
 func WsHandler(c *gin.Context) {
+	value, exists := c.Get("hub")
+
+	hub, ok := value.(*helper.Hub)
+	if !ok {
+		c.JSON(500, gin.H{"error": "invalid hub type"})
+		return
+	}
+
+	if !exists {
+		c.JSON(500, gin.H{"error": "hub not found"})
+		return
+	}
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Fatal("Error in websocket upgrader -> ", err)
@@ -110,14 +118,16 @@ func WsHandler(c *gin.Context) {
 			continue
 		}
 
+		hub.AddClient(Message.User, conn)
+		defer hub.RemoveClient(Message.User)
+
 		switch Message.Event {
 		case "Message":
-			handleMessageEvent(conn, Message, mt)
-
+			handleMessageEvent(conn, Message, mt, hub)
 		case "Room-Message":
 			handleMessageEventForRoom(conn, Message, mt)
 		case "join":
-			handleJoin(conn, Message, mt)
+			handleJoin(conn, Message, mt, hub)
 		}
 	}
 }
