@@ -1,7 +1,8 @@
 import { useState } from "react"
 import axios from "axios"
+import { useNavigate } from "react-router-dom"
 
-const API = "http://localhost:8080"
+const API = "http://localhost:8080/users"
 
 const handleLogin = async (username: string, password: string) => {
     try {
@@ -11,13 +12,17 @@ const handleLogin = async (username: string, password: string) => {
         })
 
         if(res.data?.success) {
+            console.log("res.data -> ", res.data)
             localStorage.setItem("username", username)
             localStorage.setItem("token", res.data?.token)
+            return true
         }else {
             console.log("Error in login -> ", res.data)
+            return false
         }
     } catch (error) {
         console.log("Error during login", error)
+        return false
     }
 }
 
@@ -30,14 +35,18 @@ const handleSignup = async (username: string, email: string, password: string) =
         })
 
         if(res.data?.success) {
-            console.log("Logged in Successfully")
+            console.log("Signup in Successfully")
+            console.log(res.data)
             localStorage.setItem("username", username)
             localStorage.setItem("token", res.data?.token)
+            return true
         }else {
             console.log("error -> ", res.data)
+            return false
         }
     } catch (error) {
         console.log("Error during singup", error)
+        return false
     }
 }
 
@@ -51,11 +60,18 @@ const Login = () => {
         setIslogin(!islogin)
     }
 
+    const nav = useNavigate()
     const handleSubmit = async () => {
         if(islogin) {
-            await handleLogin(username, password)
+            const success = await handleLogin(username, password)
+            if(success) {
+                nav("/")
+            }
         }else {
-            await handleSignup(username, email, password)
+            const success = await handleSignup(username, email, password)
+            if(success) {
+                nav("/")
+            }
         }
     }
 

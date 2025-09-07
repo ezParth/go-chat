@@ -114,6 +114,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("USER ----> ", user)
+
 	fmt.Println("Hashed Password -> ", passwordFromDB)
 	isPasswordCorrect := auth.CompareHashedPassword(passwordFromDB, LoginData.Password)
 	if !isPasswordCorrect {
@@ -121,9 +123,11 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := auth.GenerateJWTToken(user["name"].(string))
+	token, err := auth.GenerateJWTToken(user["username"].(string))
 	if err != nil {
-		panic(err)
+		fmt.Println("Error in token generation -> ", err)
 	}
+
+	fmt.Println("Logged in Successfully")
 	c.JSON(http.StatusOK, gin.H{"success": true, "token": token, "message": "Successfully LoggedIn"})
 }
