@@ -17,6 +17,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("");
   const { username, isAuthenticated } = useSelector((state: RootState) => state.auth)
+  const [peopleOnline, setPeopleOnline] = useState<string[]>([])
   const nav = useNavigate()
 
   useEffect(() => {
@@ -65,7 +66,6 @@ export default function Chat() {
       }
     };
 
-    // cleanup on component unmount
     return () => {
       ws.current?.close();
     };
@@ -91,6 +91,11 @@ export default function Chat() {
   return (
     <div>
       <p>welcome - {username}</p>
+      <p>
+        {peopleOnline.map((people, index) => {
+          return <li key={index}>{people}</li>
+        })}
+      </p>
       <div>
         <input
           type="text"
