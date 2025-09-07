@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -139,4 +140,42 @@ func GetGroupsByUser(c *gin.Context) {
 		"success": true,
 		"groups":  user.Groups,
 	})
+}
+
+func DeleteGroup(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+	defer cancel()
+
+	username, exist := c.Get("username")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User doesn't exist", "success": false})
+		return
+	}
+
+	var groupData struct {
+		GroupName string `json:"groupName"`
+	}
+
+	if err := c.BindJSON(&groupData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err, "success": false})
+	}
+
+	var group models.Group
+	if err := groupCollection.FindOne(ctx, bson.M{"groupname": groupData.GroupName}).Decode(&group); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group does not exist", "success": false})
+	}
+
+	if group.Admin.Username != username.(string) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "only admins can delete a group", "success": false})
+	}
+
+	_, err := groupCollection.DeleteOne(ctx, bson.M{"groupname": groupData.GroupName})
+	if err != nil {
+		fmt.Println("ERROR IN DELETING GROUP -> ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete group", "success": false})
+	}
+
+	// remove from user too
+
+	c.JSON(http.StatusOK, gin.H{"message": "successfully deleted the group", "success": false})
 }

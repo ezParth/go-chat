@@ -25,6 +25,14 @@ func SetupRouter(hub *helper.Hub) *gin.Engine {
 		userRoutes.POST("/signup", controller.Signup)
 	}
 
+	groupRoutes := r.Group("/group")
+	{
+		groupRoutes.POST("/create", auth.AuthMiddleware(), controller.CreateGroup)
+		// groupRoutes.DELETE("/delete", auth.AuthMiddleware(), controller.CreateGroup())
+		groupRoutes.POST("/join", auth.AuthMiddleware(), controller.JoinGroup)
+		groupRoutes.GET("/getGroups", auth.AuthMiddleware(), controller.GetGroupsByUser)
+	}
+
 	r.GET("/ws", ws.WsHandler)
 
 	return r
