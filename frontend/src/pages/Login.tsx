@@ -3,7 +3,7 @@ import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import { useDispatch } from "react-redux"
 import { loginSuccess } from "../features/auth/authSlice"
-import { API } from "../API/api"
+import { API } from "../api/api"
 
 const handleLogin = async (username: string, password: string) => {
     try {

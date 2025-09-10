@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { API } from "../API/api"
+import { API } from "../api/api"
 import axios from "axios"
 import { useSelector } from "react-redux"
 import type { RootState } from "../store/store"
