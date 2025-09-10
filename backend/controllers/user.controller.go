@@ -4,6 +4,7 @@ import (
 	auth "backend/auth"
 	client "backend/database"
 	"backend/models"
+	goType "backend/types"
 	"context"
 	"fmt"
 	"log"
@@ -140,6 +141,19 @@ func Login(c *gin.Context) {
 		"token":   token,
 		"message": "Successfully Logged In",
 	})
+}
+
+func getUserByName(name string) *goType.GetUserByName {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	var user models.User
+
+	if err := userCollection.FindOne(ctx, bson.M{"username": name}).Decode(&user); err != nil {
+		return &goType.GetUserByName{Success: false, Message: "Cannot find User", User: nil}
+	}
+
+	return &goType.GetUserByName{Success: true, Message: "User Retrived Successfully", User: &user}
 }
 
 // package controllers
