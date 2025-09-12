@@ -3,7 +3,7 @@ package main
 import (
 	controller "backend/controllers"
 	mongo "backend/database"
-	"backend/helper"
+	helper "backend/helper"
 	router "backend/router"
 	"fmt"
 )

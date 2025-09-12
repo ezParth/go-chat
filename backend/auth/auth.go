@@ -26,7 +26,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		claim, err := ValidateJWTToken(parts[1])
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err})
 		}
 

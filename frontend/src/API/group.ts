@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import { store, type RootState } from "../store/store";
 
@@ -34,11 +33,15 @@ if(!token) {
 });
 
 export const groupApi = {
-  createGroup: (groupName: string, avatar?: File) => {
-    const formData = new FormData();
-    formData.append("groupname", groupName);
-    if (avatar) formData.append("avatar", avatar);
-    return api.post("/create", formData);
+  // createGroup: (groupName: string, avatar?: File) => {
+  //   const formData = new FormData();
+  //   formData.append("groupname", groupName);
+  //   if (avatar) formData.append("avatar", avatar);
+  //   return api.post("/create", formData);
+  // },
+
+  createGroup: (groupName: string, avatar?: string) => {
+    return api.post("/create", {groupName: groupName, avatar: avatar})
   },
 
   joinGroup: (groupName: string) => {

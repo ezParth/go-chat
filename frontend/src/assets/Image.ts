@@ -1,0 +1,1 @@
+export const avatarlink = "https://www.google.com/url?sa=i&url=https%3A%2F%2Fpk.ign.com%2Favatar-the-last-airbender-1%2F187674%2Fnews%2Fan-avatar-the-last-airbender-open-world-rpg-is-in-development-but-its-mobile-only&psig=AOvVaw3CHrI2GP965T2nmb92hzC2&ust=1757751273948000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCKiF0PXj0o8DFQAAAAAdAAAAABAE"

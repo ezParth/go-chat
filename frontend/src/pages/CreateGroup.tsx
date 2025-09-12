@@ -3,6 +3,7 @@ import { groupApi } from "../api/group.ts"
 import { useSelector } from "react-redux"
 import type { RootState } from "../store/store"
 import { useNavigate } from "react-router-dom"
+import { avatarlink } from "../assets/Image.ts"
 
 const CreateGroup = () => {
   const [groupName, setGroupName] = useState<string>("")
@@ -22,8 +23,11 @@ const CreateGroup = () => {
     }
 
     if (!token) return
+    let res
     try {
-      const res = await groupApi.createGroup(groupName)
+      console.log("Making an API call to go-server")
+      res = await groupApi.createGroup(groupName, avatarlink)
+      console.log("Create Group Response -> ", res)
       if (res?.data.success) {
         console.log("Group created -> ", res.data)
         nav(`/groupChat/${groupName}`)
@@ -32,6 +36,8 @@ const CreateGroup = () => {
       }
     } catch (err) {
       console.error("Error creating group", err)
+    } finally {
+      console.log("Create Group Response -> ", res)
     }
   }
 

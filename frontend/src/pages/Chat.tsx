@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store/store";
 import { useNavigate } from "react-router-dom";
+import { getSocket } from "../servies/getSocket";
 
 interface WSMessage {
   event: string;
@@ -30,7 +31,8 @@ export default function Chat() {
 
 
   useEffect(() => {
-    ws.current = new WebSocket("ws://localhost:8080/ws");
+    // ws.current = new WebSocket("ws://localhost:8080/ws");
+    ws.current = getSocket()
 
     ws.current.onopen = () => {
       console.log("Client Connected Successfully");

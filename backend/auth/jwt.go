@@ -15,7 +15,7 @@ type Claim struct {
 var JWTKEY = []byte("My_JWT_Key")
 
 func GenerateJWTToken(username string) (string, error) {
-	expirationTime := time.Now().Add(1 * time.Hour)
+	expirationTime := time.Now().Add(100 * time.Hour)
 
 	claim := &Claim{
 		Username: username,

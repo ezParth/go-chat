@@ -34,7 +34,6 @@ func SetupRouter(hub *helper.Hub) *gin.Engine {
 		groupRoutes.GET("/avatar/:groupName", auth.AuthMiddleware(), controller.GetGroupAvatar)
 		groupRoutes.GET("/members/:groupName", auth.AuthMiddleware(), controller.GetGroupMembersAndAdmin)
 		groupRoutes.DELETE("/delete", auth.AuthMiddleware(), controller.DeleteGroup)
-
 	}
 
 	r.GET("/ws", ws.WsHandler)

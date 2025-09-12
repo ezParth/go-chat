@@ -47,8 +47,11 @@ func CreateGroupLogic(ctx context.Context, username, groupName, avatar string) (
 
 func JoinGroupLogic(ctx context.Context, username, groupName string) error {
 	var group models.Group
-	err := groupCollection.FindOne(ctx, bson.M{"groupName": groupName}).Decode(&group)
+	fmt.Println("groupname -> ", groupName)
+	err := groupCollection.FindOne(ctx, bson.M{"groupname": groupName}).Decode(&group)
+	// err := groupCollection.FindOne(ctx, bson.M{"groupName": groupName}).Decode(&group)
 	if err != nil {
+		fmt.Println("Error in group collection finding the group with groupName -> ", groupName, " error -> ", err)
 		return fmt.Errorf("group not found")
 	}
 
@@ -59,7 +62,8 @@ func JoinGroupLogic(ctx context.Context, username, groupName string) error {
 	}
 
 	groupUpdate := bson.M{"$addToSet": bson.M{"members": models.User{Username: username}}}
-	_, err = groupCollection.UpdateOne(ctx, bson.M{"groupName": groupName}, groupUpdate)
+	// _, err = groupCollection.UpdateOne(ctx, bson.M{"groupName": groupName}, groupUpdate)
+	_, err = groupCollection.UpdateOne(ctx, bson.M{"groupname": groupName}, groupUpdate)
 	return err
 }
 
@@ -94,6 +98,7 @@ func DeleteGroupLogic(ctx context.Context, username, groupName string) error {
 }
 
 func SaveGroupChatLogic(ctx context.Context, username, groupName, message string) error {
+	fmt.Println("hitting groupChat login")
 	chat := models.Chat{
 		ID:       primitive.NewObjectID(),
 		Sender:   username,
@@ -107,6 +112,10 @@ func SaveGroupChatLogic(ctx context.Context, username, groupName, message string
 		bson.M{"groupname": groupName},
 		bson.M{"$push": bson.M{"messages": chat}},
 	)
+	// fmt.Println("update -> ", update)
+	if err != nil {
+		fmt.Println("Error in saving group chat -> ", err)
+	}
 	return err
 }
 
@@ -137,28 +146,32 @@ func GetGroupMembersAndAdminLogic(ctx context.Context, groupName string) ([]mode
 // ---------------- GIN HANDLERS ----------------
 
 func CreateGroup(c *gin.Context) {
+	fmt.Println("hitting")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	username, _ := c.Get("username")
+	fmt.Println("username -> ", username)
 	var req struct {
 		GroupName string `json:"groupName"`
 		Avatar    string `json:"avatar,omitempty"`
 	}
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		fmt.Println("Error in c.BindJSON(&req): ", err)
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid format", "error": "invalid request"})
 		return
 	}
 
 	group, err := CreateGroupLogic(ctx, username.(string), req.GroupName, req.Avatar)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "success": false, "Message": "Unable to create Group"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "group": group})
+	c.JSON(http.StatusOK, gin.H{"success": true, "group": group, "message": "Group Created Successfully"})
 }
 
 func JoinGroup(c *gin.Context) {
+	fmt.Println("Hitting JoinGroup")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -167,14 +180,17 @@ func JoinGroup(c *gin.Context) {
 		GroupName string `json:"groupName"`
 	}
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		fmt.Println("Error in c.BindJSON(&res): ", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request", "message": "Invalid Format for message", "success": false})
 		return
 	}
 
 	if err := JoinGroupLogic(ctx, username.(string), req.GroupName); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		fmt.Println("Error in Joining the Group -> ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": "Unable to Join Group", "success": false})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "joined successfully"})
 }
 
@@ -226,6 +242,7 @@ func SaveGroupChat(c *gin.Context) {
 	}
 
 	if err := SaveGroupChatLogic(ctx, username.(string), req.GroupName, req.Message); err != nil {
+		fmt.Println("error in saving group chat -> ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save chat"})
 		return
 	}
@@ -233,12 +250,16 @@ func SaveGroupChat(c *gin.Context) {
 }
 
 func GetGroupChat(c *gin.Context) {
+	// fmt.Println("hitting getGroupChat")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	groupName := c.Param("groupName")
+	// fmt.Println("GroupName -> ", groupName)
 	chats, err := GetGroupChatLogic(ctx, groupName)
+	// fmt.Println("Chats -> ", chats)
 	if err != nil {
+		fmt.Println("Error in saving group chat -> ", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
 		return
 	}

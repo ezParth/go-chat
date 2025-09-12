@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 import type { RootState } from "../store/store"
+import { getSocket } from "../servies/getSocket"
+import { showError } from "../servies/toast"
+import { groupApi } from "../api/group"
 
 interface WSMessage {
   event: string
@@ -26,14 +30,12 @@ const GroupChat = () => {
 
   useEffect(() => {
     if (!isAuthenticated || !username || !groupName) return
-
-    // Connect WebSocket
-    ws.current = new WebSocket("ws://localhost:8080/ws")
+    // ws.current = new WebSocket("ws://localhost:8080/ws")
+    ws.current = getSocket()
 
     ws.current.onopen = () => {
-      console.log("Connected to Group Chat WS")
+      console.log("✅ Connected to Group Chat WS")
 
-      // Join the group room
       const joinPayload: WSMessage = {
         event: "join",
         room: groupName,
@@ -45,23 +47,25 @@ const GroupChat = () => {
     ws.current.onmessage = (event: MessageEvent) => {
       try {
         const msg: WSMessage = JSON.parse(event.data)
+        console.log("MESSAGE -> ", msg)
         if (!msg.event) return
 
         switch (msg.event) {
-          case "Recieve-Message":
-            setMessages((prev) => [
-              ...prev,
-              { sender: msg.user || "Unknown", message: String(msg.data) },
-            ])
+          case `Recieve-Message-${groupName}`:
+          // case `Recieve-Message`:
+            saveMessage(msg)
             break
 
           default:
-            console.log("Unhandled event:", msg.event)
+            console.log("⚠️ Unhandled event:", msg.event)
         }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
-        console.error("Invalid WS message:", event.data)
+        console.error("❌ Invalid WS message:", event.data)
       }
+    }
+
+    ws.current.onclose = () => {
+      console.log("🔌 Disconnected from WS")
     }
 
     return () => {
@@ -69,18 +73,58 @@ const GroupChat = () => {
     }
   }, [groupName, username, isAuthenticated])
 
+  useEffect(() => {
+    const fetchGroupChat = async () => {
+      try {
+        if(!groupName) {
+          showError("GroupName not found")
+          return
+        }
+
+        const res = await groupApi.getGroupChat(groupName)
+        console.log("response of getGroupChat -> ", res)
+  
+        if (!res?.data.success) {
+          showError("Cannot get group Chat")
+        } else {
+          console.log("chats -> ", res?.data.chats)
+          setMessages(res?.data.chats)
+        }
+      } catch (err) {
+        showError("Error fetching group chat")
+        console.error(err)
+      }
+    }
+  
+    fetchGroupChat()
+  }, [groupName])
+  
+  const saveMessage = (msg: WSMessage) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        sender: msg.user || "Unknown",
+        message: String(msg.data),
+        time: new Date().toLocaleTimeString(),
+      },
+    ])
+  }
+
   const sendMessage = () => {
     if (!newMessage.trim() || !groupName || !username) return
 
     const payload: WSMessage = {
-      event: "Message",
+      event: `Send-Message`,
       room: groupName,
       user: username,
       data: newMessage,
     }
 
     ws.current?.send(JSON.stringify(payload))
-    setMessages([...messages, { sender: "You", message: newMessage }])
+    // setMessages((prev) => [
+    //   ...prev,
+    //   { sender: "You", message: newMessage, time: new Date().toLocaleTimeString() },
+    // ])
     setNewMessage("")
   }
 
@@ -88,7 +132,7 @@ const GroupChat = () => {
 
   return (
     <div style={{ padding: "2rem" }}>
-      <h2>Group Chat: {groupName}</h2>
+      <h2>💬 Group Chat: {groupName}</h2>
       <div
         style={{
           border: "1px solid gray",
@@ -100,7 +144,10 @@ const GroupChat = () => {
       >
         {messages.map((msg, idx) => (
           <p key={idx}>
-            <strong>{msg.sender}:</strong> {msg.message}
+            <strong>{msg.sender}:</strong> {msg.message}{" "}
+            <span style={{ fontSize: "0.75rem", color: "gray" }}>
+              {msg.time}
+            </span>
           </p>
         ))}
       </div>
