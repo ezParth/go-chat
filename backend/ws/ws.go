@@ -1,8 +1,8 @@
 package ws
 
 import (
+	helper "backend/config"
 	"backend/controllers"
-	helper "backend/helper"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -80,6 +80,9 @@ func handleGroupChat(msg WSMessage, _ int, hub *helper.Hub) {
 		return
 	}
 
+	fmt.Println("PrintingHub")
+	hub.PrintHub()
+	fmt.Println("\nDone Printing Hub")
 	// 1. Convert data to string (message text)
 	text, ok := msg.Data.(string)
 	if !ok {
@@ -128,6 +131,13 @@ func handleJoinRoom(conn *websocket.Conn, msg WSMessage, mt int) {
 
 func handleJoin(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
 	// helper.User[msg.User] = conn
+	hub.AddClient(msg.User, conn)
+	fmt.Println("Client Connected: ", msg.User)
+}
+
+func handleClose(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
+	hub.RemoveClient(conn)
+	fmt.Println("Client Disconnected: ", msg.User)
 }
 
 func WsHandler(c *gin.Context) {
@@ -151,10 +161,10 @@ func WsHandler(c *gin.Context) {
 
 	fmt.Println("conn -> ", conn.LocalAddr())
 
-	var initialUser = "unknown"
-	hub.AddClient(initialUser, conn)
+	// var initialUser = "unknown"
+	// hub.AddClient(initialUser, conn)
 	defer func() {
-		hub.RemoveClient(initialUser)
+		hub.RemoveClient(conn)
 		conn.Close()
 	}()
 
@@ -182,9 +192,9 @@ func WsHandler(c *gin.Context) {
 		}
 
 		// changed: update initialUser when first message provides username
-		if initialUser == "unknown" && Message.User != "" {
-			initialUser = Message.User
-		}
+		// if initialUser == "unknown" && Message.User != "" {
+		// 	initialUser = Message.User
+		// }
 
 		switch Message.Event {
 		case "Message":
@@ -195,6 +205,8 @@ func WsHandler(c *gin.Context) {
 			handleJoin(conn, Message, mt, hub)
 		case "Send-Message":
 			handleGroupChat(Message, mt, hub)
+		case "leave":
+			handleClose(conn, Message, mt, hub)
 		}
 	}
 }

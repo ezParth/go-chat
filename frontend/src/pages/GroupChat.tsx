@@ -30,12 +30,13 @@ const GroupChat = () => {
 
   useEffect(() => {
     if (!isAuthenticated || !username || !groupName) return
-    // ws.current = new WebSocket("ws://localhost:8080/ws")
+
     ws.current = getSocket()
 
     ws.current.onopen = () => {
       console.log("✅ Connected to Group Chat WS")
 
+      // 👉 JOIN event
       const joinPayload: WSMessage = {
         event: "join",
         room: groupName,
@@ -52,7 +53,6 @@ const GroupChat = () => {
 
         switch (msg.event) {
           case `Recieve-Message-${groupName}`:
-          // case `Recieve-Message`:
             saveMessage(msg)
             break
 
@@ -69,6 +69,14 @@ const GroupChat = () => {
     }
 
     return () => {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        const leavePayload: WSMessage = {
+          event: "leave",
+          room: groupName,
+          user: username,
+        }
+        ws.current.send(JSON.stringify(leavePayload))
+      }
       ws.current?.close()
     }
   }, [groupName, username, isAuthenticated])
@@ -76,7 +84,7 @@ const GroupChat = () => {
   useEffect(() => {
     const fetchGroupChat = async () => {
       try {
-        if(!groupName) {
+        if (!groupName) {
           showError("GroupName not found")
           return
         }
@@ -114,17 +122,13 @@ const GroupChat = () => {
     if (!newMessage.trim() || !groupName || !username) return
 
     const payload: WSMessage = {
-      event: `Send-Message`,
+      event: "Send-Message",
       room: groupName,
       user: username,
       data: newMessage,
     }
 
     ws.current?.send(JSON.stringify(payload))
-    // setMessages((prev) => [
-    //   ...prev,
-    //   { sender: "You", message: newMessage, time: new Date().toLocaleTimeString() },
-    // ])
     setNewMessage("")
   }
 

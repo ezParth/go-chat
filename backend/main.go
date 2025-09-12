@@ -1,9 +1,9 @@
 package main
 
 import (
+	helper "backend/config"
 	controller "backend/controllers"
 	mongo "backend/database"
-	helper "backend/helper"
 	router "backend/router"
 	"fmt"
 )

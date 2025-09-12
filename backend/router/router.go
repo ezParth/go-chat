@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	auth "backend/auth"
+	helper "backend/config"
 	controller "backend/controllers"
-	helper "backend/helper"
 	ws "backend/ws"
 )
 
