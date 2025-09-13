@@ -67,4 +67,8 @@ export const groupApi = {
   deleteGroup: (groupName: string) => {
     return api.delete("/delete", { data: { groupname: groupName } });
   },
+
+  getUsersByGroupName: (groupName: string) => {
+    return api.get(`/online/${groupName}`)
+  }
 };

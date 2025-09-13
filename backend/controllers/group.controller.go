@@ -10,15 +10,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	client "backend/database"
 	"backend/models"
 )
 
+var onlineCollection *mongo.Collection
 var groupCollection *mongo.Collection
 
 func InitGroupCollection() {
 	groupCollection = client.Client.Database("go-chat").Collection("Groups")
+	onlineCollection = client.Client.Database("go-chat").Collection("Online")
 }
 
 func CreateGroupLogic(ctx context.Context, username, groupName, avatar string) (models.Group, error) {
@@ -142,6 +145,46 @@ func GetGroupMembersAndAdminLogic(ctx context.Context, groupName string) ([]mode
 		return nil, models.User{}, err
 	}
 	return group.Members, group.Admin, nil
+}
+
+func AddUserAsOnlineLogic(groupName string, username string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	filter := bson.M{"groupname": groupName}
+	update := bson.M{"$addToSet": bson.M{"online": username}}
+	options := options.Update().SetUpsert(true)
+	_, err := onlineCollection.UpdateOne(ctx, filter, update, options)
+	return err
+}
+
+func RemoveUserAsOnlineLogic(groupName string, username string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	filter := bson.M{"groupname": groupName}
+	update := bson.M{"$pull": bson.M{"username": username}}
+	_, err := onlineCollection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+func GetOnlineUserByGroupNameLogin(groupName string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	var online models.Online
+	filter := bson.M{"groupname": groupName}
+	err := onlineCollection.FindOne(ctx, filter).Decode(&online)
+	if err != nil {
+		return nil, err
+	}
+	return online.Online, nil
+}
+
+func DeleteAGroupChatLogic(c *gin.Context) {
+	// ctx, cancel := context.Ba
+}
+
+func DeleteWholeGroupChatLogic(c *gin.Context) {
+
 }
 
 // ---------------- GIN HANDLERS ----------------
@@ -293,12 +336,18 @@ func GetGroupMembersAndAdmin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "members": members, "admin": admin})
 }
 
-func DeleteAGroupChat(c *gin.Context) {
-	// ctx, cancel := context.Ba
-}
+func GetOnlineUserByGroupName(c *gin.Context) {
+	groupName := c.Param("groupName")
+	if groupName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"messgae": "GroupName cannot be Empty", "success": false})
+		return
+	}
+	members, err := GetOnlineUserByGroupNameLogin(groupName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Cannot Get Online Users", "error": err, "success": false})
+	}
 
-func DeleteWholeGroupChat(c *gin.Context) {
-
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully fetched online users", "members": members, "success": true})
 }
 
 // package controllers

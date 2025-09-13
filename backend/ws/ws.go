@@ -90,14 +90,14 @@ func handleGroupChat(msg WSMessage, _ int, hub *helper.Hub) {
 		return
 	}
 
-	err := controllers.SaveGroupChatLogic(ctx, msg.User, msg.Room, text)
-	if err != nil {
-		fmt.Println("Error saving the message", err)
-	}
-
-	if err == nil {
-		fmt.Println("GroupChat saved successfully")
-	}
+	go func() {
+		err := controllers.SaveGroupChatLogic(ctx, msg.User, msg.Room, text)
+		if err != nil {
+			fmt.Println("Error saving the message", err)
+		} else {
+			fmt.Println("GroupChat saved successfully")
+		}
+	}()
 
 	data, ok := msg.Data.(string)
 	if !ok {
@@ -135,12 +135,12 @@ func handleJoin(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
 	fmt.Println("Client Connected: ", msg.User)
 }
 
-func handleClose(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
+func handleClose(conn *websocket.Conn, msg WSMessage, _ int, hub *helper.Hub) {
 	hub.RemoveClient(conn)
 	fmt.Println("Client Disconnected: ", msg.User)
 }
 
-func handleGroupJoin(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
+func handleGroupJoin(_ *websocket.Conn, msg WSMessage, _ int, hub *helper.Hub) {
 	if msg.Room == "" {
 		fmt.Println("Room can't be empty dude")
 		return
@@ -153,6 +153,42 @@ func handleGroupJoin(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hu
 		Room:  msg.Room,
 	}
 
+	groupName := msg.Room
+	username := msg.User
+	go func(groupName string, username string) {
+		if err := controllers.AddUserAsOnlineLogic(groupName, username); err != nil {
+			fmt.Println("Error in Adding User As Online -> ", err)
+		} else {
+			fmt.Println("Added User as Online")
+		}
+	}(groupName, username)
+
+	hub.AddToGroup(msg.Room, msg.User)
+	hub.Broadcast(Message)
+}
+
+func handleLeaveGroup(_ *websocket.Conn, msg WSMessage, _ int, hub *helper.Hub) {
+	if msg.Room == "" {
+		fmt.Println("Room can't be empty")
+		return
+	}
+
+	Message := &WSMessage{
+		Event: "Group-Leave-" + msg.Room,
+		User:  msg.User,
+		Data:  msg.User + " Left the Group",
+		Room:  msg.Room,
+	}
+
+	groupName := msg.Room
+	username := msg.User
+	go func(groupName string, username string) {
+		if err := controllers.RemoveUserAsOnlineLogic(groupName, username); err != nil {
+			fmt.Println("Error in Adding User As Online -> ", err)
+		}
+	}(groupName, username)
+
+	hub.RemoveFromGroup(msg.Room, msg.User)
 	hub.Broadcast(Message)
 }
 
@@ -225,6 +261,8 @@ func WsHandler(c *gin.Context) {
 			handleClose(conn, Message, mt, hub)
 		case "group-join":
 			handleGroupJoin(conn, Message, mt, hub)
+		case "group-leave":
+			handleLeaveGroup(conn, Message, mt, hub)
 		}
 	}
 }

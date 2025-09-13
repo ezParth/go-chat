@@ -26,6 +26,7 @@ const GroupChat = () => {
   const { username, isAuthenticated } = useSelector((state: RootState) => state.auth)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const ws = useRef<WebSocket | null>(null)
 
   useEffect(() => {
@@ -36,7 +37,6 @@ const GroupChat = () => {
     ws.current.onopen = () => {
       console.log("✅ Connected to Group Chat WS")
 
-      // 👉 JOIN event
       const joinPayload: WSMessage = {
         event: "join",
         room: groupName,
@@ -49,14 +49,12 @@ const GroupChat = () => {
         room: groupName,
         user: username
       }
-
       ws.current?.send(JSON.stringify(groupPayload))
     }
 
     ws.current.onmessage = (event: MessageEvent) => {
       try {
         const msg: WSMessage = JSON.parse(event.data)
-        console.log("MESSAGE -> ", msg)
         if (!msg.event) return
 
         switch (msg.event) {
@@ -65,6 +63,7 @@ const GroupChat = () => {
             break
           case `Group-Join-${groupName}`:
             showInfo(msg.data)
+            setOnlineUsers((prev) => msg.user && !prev.includes(msg.user) ? [...prev, msg.user] : prev)
             break
           default:
             console.log("⚠️ Unhandled event:", msg.event)
@@ -98,23 +97,36 @@ const GroupChat = () => {
           showError("GroupName not found")
           return
         }
-
         const res = await groupApi.getGroupChat(groupName)
-        console.log("response of getGroupChat -> ", res)
-  
-        if (!res?.data.success) {
-          showError("Cannot get group Chat")
-        } else {
-          console.log("chats -> ", res?.data.chats)
+        if (res?.data.success) {
           setMessages(res?.data.chats)
+        } else {
+          showError("Cannot get group Chat")
         }
       } catch (err) {
         showError("Error fetching group chat")
-        console.error(err)
       }
     }
-  
+
+    const fetchOnlineUsers = async () => {
+      try {
+        if (!groupName) {
+          showError("GroupName Not Found!")
+          return
+        }
+        const res = await groupApi.getUsersByGroupName(groupName)
+        if (res?.data.success) {
+          setOnlineUsers(res?.data.members)
+        } else {
+          showError("Cannot get online users")
+        }
+      } catch (error) {
+        showError("Error fetching online users")
+      }
+    }
+
     fetchGroupChat()
+    fetchOnlineUsers()
   }, [groupName])
   
   const saveMessage = (msg: WSMessage) => {
@@ -145,153 +157,156 @@ const GroupChat = () => {
   if (!isAuthenticated) return <p>Please log in to chat</p>
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        backgroundColor: "#ece5dd", // WhatsApp background
-      }}
-    >
-      {/* Header */}
+    <div style={{ display: "flex", height: "100vh", backgroundColor: "#ece5dd" }}>
+      {/* Sidebar for online users */}
       <div
         style={{
-          backgroundColor: "#075E54",
-          color: "white",
+          width: "220px",
+          backgroundColor: "#ffffff",
+          borderRight: "1px solid #ddd",
           padding: "1rem",
-          fontWeight: "bold",
-        }}
-      >
-        💬 {groupName} — {username}
-      </div>
-  
-      {/* Messages */}
-      <div
-        style={{
-          flex: 1,
           overflowY: "auto",
-          padding: "1rem",
-          backgroundImage:
-            "url('https://i.ibb.co/4pDNDk1/whatsapp-bg.png')", // WhatsApp-like wallpaper
-          backgroundSize: "cover",
         }}
       >
-        {messages.map((msg, idx) => {
-          const isMe = msg.sender === username
-          return (
+        <h3 style={{ marginBottom: "1rem", color: "#075E54" }}>🟢 Online</h3>
+        {onlineUsers?.length > 0 ? (
+          onlineUsers.map((user, idx) => (
             <div
               key={idx}
               style={{
-                display: "flex",
-                justifyContent: isMe ? "flex-end" : "flex-start",
-                marginBottom: "0.5rem",
+                padding: "0.5rem",
+                borderBottom: "1px solid #f0f0f0",
+                fontWeight: user === username ? "bold" : "normal",
+                color: user === username ? "#075E54" : "#333",
               }}
             >
-              <div
-                style={{
-                  backgroundColor: isMe ? "#dcf8c6" : "white", // green for me, white for others
-                  padding: "0.5rem 1rem",
-                  borderRadius: "10px",
-                  maxWidth: "60%",
-                  boxShadow: "0 1px 1px rgba(0,0,0,0.1)",
-                  position: "relative",
-                }}
-              >
-                <span style={{ fontWeight: "bold", fontSize: "0.85rem" }}>
-                  {msg.sender}
-                </span>
-                <div>{msg.message}</div>
-                <span
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "gray",
-                    position: "absolute",
-                    bottom: "2px",
-                    right: "6px",
-                  }}
-                >
-                  {msg.time}
-                </span>
-              </div>
+              {user}
             </div>
-          )
-        })}
+          ))
+        ) : (
+          <p style={{ color: "gray" }}>No users online</p>
+        )}
       </div>
-  
-      {/* Input */}
-      <div
-        style={{
-          display: "flex",
-          padding: "0.5rem",
-          backgroundColor: "#f0f0f0",
-          borderTop: "1px solid #ddd",
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Type a message"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+
+      {/* Chat area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <div
           style={{
-            flex: 1,
-            padding: "0.75rem",
-            borderRadius: "20px",
-            border: "1px solid #ccc",
-            outline: "none",
-          }}
-        />
-        <button
-          onClick={sendMessage}
-          style={{
-            marginLeft: "0.5rem",
-            padding: "0.75rem 1.25rem",
-            borderRadius: "50%",
-            border: "none",
             backgroundColor: "#075E54",
             color: "white",
+            padding: "1rem",
             fontWeight: "bold",
-            cursor: "pointer",
           }}
         >
-          ➤
-        </button>
+          💬 {groupName} — {username}
+        </div>
+  
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "1rem",
+            backgroundImage: "url('https://i.ibb.co/4pDNDk1/whatsapp-bg.png')",
+            backgroundSize: "cover",
+          }}
+        >
+          {messages.map((msg, idx) => {
+            const isMe = msg.sender === username
+            return (
+              <div
+                key={idx}
+                style={{
+                  display: "flex",
+                  justifyContent: isMe ? "flex-end" : "flex-start",
+                  marginBottom: "1rem",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: isMe ? "#dcf8c6" : "white",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "12px",
+                    maxWidth: "65%",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {/* Sender */}
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "0.85rem",
+                      textAlign: "center",
+                      marginBottom: "0.25rem",
+                      color: isMe ? "#075E54" : "#333",
+                    }}
+                  >
+                    {msg.sender}
+                  </div>
+
+                  {/* Message */}
+                  <div style={{ fontSize: "1rem", marginBottom: "0.4rem" }}>
+                    {msg.message}
+                  </div>
+
+                  {/* Time */}
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: "bold",
+                      color: "gray",
+                      textAlign: "right",
+                    }}
+                  >
+                    {msg.time}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+  
+        <div
+          style={{
+            display: "flex",
+            padding: "0.5rem",
+            backgroundColor: "#f0f0f0",
+            borderTop: "1px solid #ddd",
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Type a message"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            style={{
+              flex: 1,
+              padding: "0.75rem",
+              borderRadius: "20px",
+              border: "1px solid #ccc",
+              outline: "none",
+              fontSize: "1rem",
+            }}
+          />
+          <button
+            onClick={sendMessage}
+            style={{
+              marginLeft: "0.5rem",
+              padding: "0.75rem 1.25rem",
+              borderRadius: "50%",
+              border: "none",
+              backgroundColor: "#075E54",
+              color: "white",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "1.2rem",
+            }}
+          >
+            ➤
+          </button>
+        </div>
       </div>
     </div>
   )
-  
-
-  // return (
-  //   <div style={{ padding: "2rem" }}>
-  //     <h2>💬 Group Chat: {groupName} Username: {username}</h2>
-  //     <div
-  //       style={{
-  //         border: "1px solid gray",
-  //         height: "300px",
-  //         overflowY: "scroll",
-  //         padding: "1rem",
-  //         marginBottom: "1rem",
-  //       }}
-  //     >
-  //       {messages.map((msg, idx) => (
-  //         <p key={idx}>
-  //           <strong>{msg.sender}:</strong> {msg.message}{" "}
-  //           <span style={{ fontSize: "0.75rem", color: "gray" }}>
-  //             {msg.time}
-  //           </span>
-  //         </p>
-  //       ))}
-  //     </div>
-  //     <input
-  //       type="text"
-  //       placeholder="Type a message"
-  //       value={newMessage}
-  //       onChange={(e) => setNewMessage(e.target.value)}
-  //     />
-  //     <button onClick={sendMessage} style={{ marginLeft: "1rem" }}>
-  //       Send
-  //     </button>
-  //   </div>
-  // )
 }
 
 export default GroupChat

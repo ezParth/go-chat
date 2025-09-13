@@ -10,3 +10,9 @@ type Group struct {
 	Members   []User             `bson:"members" json:"members"`
 	Messages  []Chat             `bson:"messages,omitempty" json:"messages,omitempty"`
 }
+
+type Online struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	GroupName string             `bson:"groupname,omitempty" json:"groupname,omitempty"`
+	Online    []string           `bson:"online,omitempty" json:"online,omitempty"`
+}
