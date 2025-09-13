@@ -18,7 +18,7 @@ const JoinGroup = () => {
             showError("Cannot Join the Group")
         }else {
             showSuccess(`Group: ${groupName} joined successfully`)
-            nav(`/group/${groupName}`)
+            nav(`/groupChat/${groupName}`)
         }
     }
     return (

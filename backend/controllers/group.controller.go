@@ -105,6 +105,7 @@ func SaveGroupChatLogic(ctx context.Context, username, groupName, message string
 		Receiver: groupName,
 		Message:  message,
 		Status:   "sent",
+		Time:     time.Now().Format("15:04"),
 	}
 
 	_, err := groupCollection.UpdateOne(
@@ -290,6 +291,14 @@ func GetGroupMembersAndAdmin(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "members": members, "admin": admin})
+}
+
+func DeleteAGroupChat(c *gin.Context) {
+	// ctx, cancel := context.Ba
+}
+
+func DeleteWholeGroupChat(c *gin.Context) {
+
 }
 
 // package controllers

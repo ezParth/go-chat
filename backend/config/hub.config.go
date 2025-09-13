@@ -16,12 +16,13 @@ type Hub struct {
 func NewHub() *Hub {
 	return &Hub{
 		conns: make(map[string]*websocket.Conn),
+		names: make(map[*websocket.Conn]string),
 	}
 }
 
 func CreateHub() *Hub {
 	HUB := NewHub()
-	log.Println("HUB created ->", HUB)
+	log.Println("HUB created Successfully")
 	return HUB
 }
 

@@ -140,6 +140,22 @@ func handleClose(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
 	fmt.Println("Client Disconnected: ", msg.User)
 }
 
+func handleGroupJoin(conn *websocket.Conn, msg WSMessage, mt int, hub *helper.Hub) {
+	if msg.Room == "" {
+		fmt.Println("Room can't be empty dude")
+		return
+	}
+
+	Message := &WSMessage{
+		Event: "Group-Join-" + msg.Room,
+		User:  msg.User,
+		Data:  msg.User + " Joined the Group",
+		Room:  msg.Room,
+	}
+
+	hub.Broadcast(Message)
+}
+
 func WsHandler(c *gin.Context) {
 	value, exists := c.Get("hub")
 
@@ -207,6 +223,8 @@ func WsHandler(c *gin.Context) {
 			handleGroupChat(Message, mt, hub)
 		case "leave":
 			handleClose(conn, Message, mt, hub)
+		case "group-join":
+			handleGroupJoin(conn, Message, mt, hub)
 		}
 	}
 }
